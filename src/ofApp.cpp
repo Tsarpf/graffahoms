@@ -132,6 +132,23 @@ void ofApp::audioOut(float * output, int bufferSize, int nChannels)
 		outLine.addVertex(ofMap(i, 0, bufferSize - 1, 0, ofGetWidth()),
 				ofMap(output[i], -1, 1, 0, ofGetHeight()));
 	}
+	const fftBufferSize = 512;
+	float fftBuffer[] = new float[fftBufferSize];
+	if(bufferSize != 256) {
+		std::cout << "buffer size abnormal: " << bufferSize;
+	}
+
+	for(int i = 0; i < fftBufferSize; i++)
+	{
+		if(i < fftBufferSize / 2)
+		{
+			fftBuffer[i] = output[i];
+		}
+		else
+		{
+			fftBuffer[i] = output[fftBufferSize - i - 1];
+		}
+	}
 	//Todo: mirror buffer
 	//fft it.
 	//compute magnitude of resultant vectors
