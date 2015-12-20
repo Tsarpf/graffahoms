@@ -9,6 +9,17 @@ class ofApp : public ofBaseApp{
 		void update();
 		void draw();
 
+		void updateWaveform(int waveformResolution);
+		void audioOut(float * output, int bufferSize, int nChannels);
+
+		std::vector<float> waveform; // this is the lookup table
+		double phase;
+		float frequency;
+
+		ofMutex waveformMutex;
+		ofPolyline waveLine;
+		ofPolyline outLine;
+
 		void keyPressed(int key);
 		void keyReleased(int key);
 		void mouseMoved(int x, int y );
@@ -20,5 +31,5 @@ class ofApp : public ofBaseApp{
 		void windowResized(int w, int h);
 		void dragEvent(ofDragInfo dragInfo);
 		void gotMessage(ofMessage msg);
-		
+
 };
