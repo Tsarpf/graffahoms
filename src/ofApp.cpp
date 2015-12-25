@@ -1,5 +1,6 @@
 #include "ofApp.h"
-#include "../deps/ffft/FFTRealFixLen.h"
+#include <deque>
+#include <vector>
 
 const ofIndexType Faces[] = {
 	2, 1, 0,
@@ -40,15 +41,13 @@ ofVec3f n[12];
 ofFloatColor c[12];
 ofVbo vbo;
 
-ffft::FFTRealFixLen<9> fft_object;
-
 
 //--------------------------------------------------------------
 void ofApp::setup(){
 	phase = 0;
 	updateWaveform(32);
 	//ofSoundStreamSetup(1, 0); // mono output
-	ofSoundStreamSetup(2, 0, 44100, 256, 4);
+	ofSoundStreamSetup(2, 0, 44100, m_bufferSize, 4);
 
 	int i, j = 0;
 	for ( i = 0; i < 12; i++ )
@@ -83,13 +82,33 @@ void ofApp::update(){
 
 //--------------------------------------------------------------
 void ofApp::draw(){
+	//draw eq things
+	ofPolyline visualizerLine;
+	float length = 500;
+	//for(float i = 1; i < m_bufferSize / 2; i++)
+	for(float i = 1; i < m_bufferSize; i++)
+	{
+		float height = waves[waves.size() - 1][i];
+		visualizerLine.addVertex(
+			//(float)50 + length * i / ((float)m_bufferSize / 2),
+			50.0f + length * i / ((float)m_bufferSize),
+			800 - height * 4,
+			10
+		);
+	}
 	ofBackground(ofColor::black);
+	ofSetLineWidth(2);
+	ofSetColor(ofColor::red);
+	visualizerLine.draw();
+
+	//draw synth things
 	ofSetLineWidth(5);
 	ofSetColor(ofColor::lightGreen);
 	outLine.draw();
 	ofSetColor(ofColor::cyan);
 	waveLine.draw();
 
+	//Draw rotating shape
 	ofTranslate(ofGetWidth()/2, ofGetHeight()/2, 100);
 	ofRotate(ofGetElapsedTimef() * 20.0, 1, 1, 0);
 	glPointSize(10.f);
@@ -105,9 +124,8 @@ void ofApp::updateWaveform(int waveformResolution)
 	// of the waveform lookup table
 	float waveformStep = (M_PI * 2.) / (float) waveform.size();
 
-	for(int i = 0; i < waveform.size(); i++) {
+	for(unsigned int i = 0; i < waveform.size(); i++) {
 		waveform[i] = sin(i * waveformStep);
-
 		waveLine.addVertex(ofMap(i, 0, waveform.size() - 1, 0, ofGetWidth()),
 				ofMap(waveform[i], -1, 1, 0, ofGetHeight()));
 	}
@@ -115,8 +133,6 @@ void ofApp::updateWaveform(int waveformResolution)
 
 void ofApp::audioOut(float * output, int bufferSize, int nChannels)
 {
-
-
 	ofScopedLock waveformLock(waveformMutex);
 
 	float sampleRate = 44100;
@@ -132,27 +148,56 @@ void ofApp::audioOut(float * output, int bufferSize, int nChannels)
 		outLine.addVertex(ofMap(i, 0, bufferSize - 1, 0, ofGetWidth()),
 				ofMap(output[i], -1, 1, 0, ofGetHeight()));
 	}
-	const fftBufferSize = 512;
-	float fftBuffer[] = new float[fftBufferSize];
-	if(bufferSize != 256) {
-		std::cout << "buffer size abnormal: " << bufferSize;
+
+	if(bufferSize != m_bufferSize) {
+		std::cout << "buffer size abnormal: " << bufferSize << " vs " << m_bufferSize << std::endl;
+		return;
 	}
 
+	auto mags = getFrequencyMagnitudes(output);
+	if(waves.size() >= m_waveTimeLength) 
+	{
+		waves.pop_front();
+	}
+	waves.push_back( *mags );
+	delete mags;
+}
+
+std::vector<float>* ofApp::getFrequencyMagnitudes(float* samples) 
+{
+	const int fftBufferSize = 2 * m_bufferSize;
+
+	//mirror buffer
+	float fftBuffer[fftBufferSize];
 	for(int i = 0; i < fftBufferSize; i++)
 	{
 		if(i < fftBufferSize / 2)
 		{
-			fftBuffer[i] = output[i];
+			fftBuffer[i] = samples[i];
 		}
 		else
 		{
-			fftBuffer[i] = output[fftBufferSize - i - 1];
+			fftBuffer[i] = samples[fftBufferSize - i - 1];
 		}
 	}
-	//Todo: mirror buffer
+    //fft_object.do_fft (f, x);     // x (real) --FFT---> f (complex)
 	//fft it.
+	float fftOutput[fftBufferSize];
+    fft_object.do_fft(fftOutput, fftBuffer);     // x (real) --FFT---> f (complex)
+    //fft_object.do_fft(fftOutput, samples);     // x (real) --FFT---> f (complex)
+
 	//compute magnitude of resultant vectors
-	//draw it!
+	std::vector<float>* mags = new std::vector<float>();
+	for(int i = 0; i < fftBufferSize / 2; i++)
+	{
+		float realPart = pow(fftOutput[i], 2);
+		float imagPart = pow(fftOutput[fftBufferSize / 2 + i], 2);
+
+		float mag = sqrt(realPart) + sqrt(imagPart);
+		mags->push_back(mag);
+	}
+
+	return mags;
 }
 
 

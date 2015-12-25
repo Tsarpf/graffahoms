@@ -1,6 +1,7 @@
 #pragma once
 
 #include "ofMain.h"
+#include "../deps/ffft/FFTRealFixLen.h"
 
 class ofApp : public ofBaseApp{
 
@@ -11,6 +12,10 @@ class ofApp : public ofBaseApp{
 
 		void updateWaveform(int waveformResolution);
 		void audioOut(float * output, int bufferSize, int nChannels);
+		std::vector<float>* getFrequencyMagnitudes(float*);
+
+		ffft::FFTRealFixLen<9> fft_object;
+		std::deque<std::vector<float>> waves;
 
 		std::vector<float> waveform; // this is the lookup table
 		double phase;
@@ -19,6 +24,8 @@ class ofApp : public ofBaseApp{
 		ofMutex waveformMutex;
 		ofPolyline waveLine;
 		ofPolyline outLine;
+		const int m_bufferSize = 256;
+		const unsigned int m_waveTimeLength = 200;
 
 		void keyPressed(int key);
 		void keyReleased(int key);
@@ -31,5 +38,4 @@ class ofApp : public ofBaseApp{
 		void windowResized(int w, int h);
 		void dragEvent(ofDragInfo dragInfo);
 		void gotMessage(ofMessage msg);
-
 };
