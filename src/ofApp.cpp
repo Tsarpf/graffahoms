@@ -4,75 +4,11 @@
 #define _USE_MATH_DEFINES
 #include <math.h>
 
-const ofIndexType Faces[] = {
-	2, 1, 0,
-	3, 2, 0,
-	4, 3, 0,
-	5, 4, 0,
-	1, 5, 0,
-	11, 6,  7,
-	11, 7,  8,
-	11, 8,  9,
-	11, 9,  10,
-	11, 10, 6,
-	1, 2, 6,
-	2, 3, 7,
-	3, 4, 8,
-	4, 5, 9,
-	5, 1, 10,
-	2,  7, 6,
-	3,  8, 7,
-	4,  9, 8,
-	5, 10, 9,
-	1, 6, 10 };
-const float Verts[] = {
-	0.000f,  0.000f,  1.000f,
-	0.894f,  0.000f,  0.447f,
-	0.276f,  0.851f,  0.447f,
-	-0.724f,  0.526f,  0.447f,
-	-0.724f, -0.526f,  0.447f,
-	0.276f, -0.851f,  0.447f,
-	0.724f,  0.526f, -0.447f,
-	-0.276f,  0.851f, -0.447f,
-	-0.894f,  0.000f, -0.447f,
-	-0.276f, -0.851f, -0.447f,
-	0.724f, -0.526f, -0.447f,
-	0.000f,  0.000f, -1.000f };
-ofVec3f v[12];
-ofVec3f n[12];
-ofFloatColor c[12];
-ofVbo vbo;
-
-
-//--------------------------------------------------------------
 void ofApp::setup(){
 	phase = 0;
 	updateWaveform(32);
 	//ofSoundStreamSetup(1, 0); // mono output
 	ofSoundStreamSetup(2, 0, 44100, m_bufferSize, 4);
-
-	int i, j = 0;
-	for ( i = 0; i < 12; i++ )
-	{
-
-		c[i].r = ofRandom(1.0);
-		c[i].g = ofRandom(1.0);
-		c[i].b = ofRandom(1.0);
-
-		v[i][0] = Verts[j] * 100.f;
-		j++;
-		v[i][1] = Verts[j] * 100.f;
-		j++;
-		v[i][2] = Verts[j] * 100.f;
-		j++;
-
-	}
-
-	vbo.setVertexData( &v[0], 12, GL_STATIC_DRAW );
-	vbo.setColorData( &c[0], 12, GL_STATIC_DRAW );
-	vbo.setIndexData( &Faces[0], 60, GL_STATIC_DRAW );
-
-	glEnable(GL_DEPTH_TEST);
 }
 
 //--------------------------------------------------------------
@@ -89,7 +25,7 @@ void ofApp::draw(){
 		//draw eq things
 		ofScopedLock waveformLock(waveformMutex);
 		ofPolyline visualizerLine;
-		float length = 500;
+		float length = 3000;
 		auto targetArr = waves[waves.size() - 1];
 		for(float i = 1; i < targetArr.size() / 2; i++)
 		//for(float i = 1; i < m_bufferSize; i++)
@@ -98,7 +34,7 @@ void ofApp::draw(){
 			visualizerLine.addVertex(
 				//(float)50 + length * i / ((float)m_bufferSize / 2),
 				50.0f + length * i / ((float)m_bufferSize),
-				500 - height * 4,
+				300 - height * 4,
 				10
 			);
 		}
@@ -107,20 +43,6 @@ void ofApp::draw(){
 		ofSetColor(ofColor::red);
 		visualizerLine.draw();
 	}
-	//draw synth things
-	/*
-	ofSetLineWidth(5);
-	ofSetColor(ofColor::lightGreen);
-	outLine.draw();
-	ofSetColor(ofColor::cyan);
-	waveLine.draw();
-
-	//Draw rotating shape
-	ofTranslate(ofGetWidth()/2, ofGetHeight()/2, 100);
-	ofRotate(ofGetElapsedTimef() * 20.0, 1, 1, 0);
-	glPointSize(10.f);
-	vbo.drawElements( GL_TRIANGLES, 60);
-	*/
 }
 
 void ofApp::updateWaveform(int waveformResolution)
@@ -163,12 +85,42 @@ void ofApp::audioOut(float * output, int bufferSize, int nChannels)
 
 
 	auto mags = getFrequencyMagnitudes(output);
+	logarithmize(*mags);
 	if(waves.size() >= m_waveTimeLength) 
 	{
 		waves.pop_front();
 	}
 	waves.push_back( *mags );
 	delete mags;
+
+}
+
+void ofApp::findMinMax(float& Min, float& Max, const std::vector<float>& List)
+{
+	for (unsigned int i = 0; i < List.size(); i++)
+	{
+		if (List[i] > m_max)
+		{
+			m_max = List[i];
+		}
+		if (List[i] < m_min && List[i] != 0)
+		{
+			m_min = List[i];
+		}
+	}
+	Min = m_min;
+	Max = m_max;
+}
+
+void ofApp::logarithmize(std::vector<float>& List)
+{
+	float min, max;
+	findMinMax(min, max, List);
+
+	for (unsigned int i = 0; i < List.size(); i++)
+	{
+		List[i] = 10.f * log10f(List[i] / max);
+	}
 }
 
 std::vector<float>* ofApp::getFrequencyMagnitudes(float* samples) 
@@ -178,32 +130,14 @@ std::vector<float>* ofApp::getFrequencyMagnitudes(float* samples)
 
 	//apply hanning to samples
 	float fftBuffer[fftBufferSize];
-	//hanning(fftBuffer, samples, fftBufferSize);
 	for (int i = 0; i < fftBufferSize; i++) {
 		float multiplier = 0.5 * (1 - cos(2 * M_PI * i / (fftBufferSize- 1)));
 		fftBuffer[i] = multiplier * samples[i];
 	}
 
-	//mirror buffer
-	/*
-	float fftBuffer[fftBufferSize];
-	for(int i = 0; i < fftBufferSize; i++)
-	{
-		if(i < fftBufferSize / 2)
-		{
-			fftBuffer[i] = samples[i];
-		}
-		else
-		{
-			fftBuffer[i] = samples[fftBufferSize - i - 1];
-		}
-	}
-	*/
-    //fft_object.do_fft (f, x);     // x (real) --FFT---> f (complex)
 	//fft it.
 	float fftOutput[fftBufferSize];
     fft_object.do_fft(fftOutput, fftBuffer);     // x (real) --FFT---> f (complex)
-	//fft_object.do_fft(fftOutput, samples);     // x (real) --FFT---> f (complex)
 
 	//compute magnitude of resultant vectors
 	std::vector<float>* mags = new std::vector<float>();
