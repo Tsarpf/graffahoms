@@ -1,6 +1,8 @@
 #include "ofApp.h"
 #include <deque>
 #include <vector>
+#define _USE_MATH_DEFINES
+#include <math.h>
 
 const ofIndexType Faces[] = {
 	2, 1, 0,
@@ -82,26 +84,31 @@ void ofApp::update(){
 
 //--------------------------------------------------------------
 void ofApp::draw(){
-	//draw eq things
-	ofPolyline visualizerLine;
-	float length = 500;
-	//for(float i = 1; i < m_bufferSize / 2; i++)
-	for(float i = 1; i < m_bufferSize; i++)
+	if (waves.size() > 0)
 	{
-		float height = waves[waves.size() - 1][i];
-		visualizerLine.addVertex(
-			//(float)50 + length * i / ((float)m_bufferSize / 2),
-			50.0f + length * i / ((float)m_bufferSize),
-			800 - height * 4,
-			10
-		);
+		//draw eq things
+		ofScopedLock waveformLock(waveformMutex);
+		ofPolyline visualizerLine;
+		float length = 500;
+		auto targetArr = waves[waves.size() - 1];
+		for(float i = 1; i < targetArr.size() / 2; i++)
+		//for(float i = 1; i < m_bufferSize; i++)
+		{
+			float height = waves[waves.size() - 1][i];
+			visualizerLine.addVertex(
+				//(float)50 + length * i / ((float)m_bufferSize / 2),
+				50.0f + length * i / ((float)m_bufferSize),
+				500 - height * 4,
+				10
+			);
+		}
+		ofBackground(ofColor::black);
+		ofSetLineWidth(2);
+		ofSetColor(ofColor::red);
+		visualizerLine.draw();
 	}
-	ofBackground(ofColor::black);
-	ofSetLineWidth(2);
-	ofSetColor(ofColor::red);
-	visualizerLine.draw();
-
 	//draw synth things
+	/*
 	ofSetLineWidth(5);
 	ofSetColor(ofColor::lightGreen);
 	outLine.draw();
@@ -113,6 +120,7 @@ void ofApp::draw(){
 	ofRotate(ofGetElapsedTimef() * 20.0, 1, 1, 0);
 	glPointSize(10.f);
 	vbo.drawElements( GL_TRIANGLES, 60);
+	*/
 }
 
 void ofApp::updateWaveform(int waveformResolution)
@@ -148,11 +156,11 @@ void ofApp::audioOut(float * output, int bufferSize, int nChannels)
 		outLine.addVertex(ofMap(i, 0, bufferSize - 1, 0, ofGetWidth()),
 				ofMap(output[i], -1, 1, 0, ofGetHeight()));
 	}
-
 	if(bufferSize != m_bufferSize) {
 		std::cout << "buffer size abnormal: " << bufferSize << " vs " << m_bufferSize << std::endl;
 		return;
 	}
+
 
 	auto mags = getFrequencyMagnitudes(output);
 	if(waves.size() >= m_waveTimeLength) 
@@ -165,9 +173,19 @@ void ofApp::audioOut(float * output, int bufferSize, int nChannels)
 
 std::vector<float>* ofApp::getFrequencyMagnitudes(float* samples) 
 {
-	const int fftBufferSize = 2 * m_bufferSize;
+	const int fftBufferSize = 256; //windows is being a dick and doesn't let it be 2 * m_bufferSize, even though it should be constant;
+	//const int fftBufferSize = 2 * m_bufferSize;
+
+	//apply hanning to samples
+	float fftBuffer[fftBufferSize];
+	//hanning(fftBuffer, samples, fftBufferSize);
+	for (int i = 0; i < fftBufferSize; i++) {
+		float multiplier = 0.5 * (1 - cos(2 * M_PI * i / (fftBufferSize- 1)));
+		fftBuffer[i] = multiplier * samples[i];
+	}
 
 	//mirror buffer
+	/*
 	float fftBuffer[fftBufferSize];
 	for(int i = 0; i < fftBufferSize; i++)
 	{
@@ -180,11 +198,12 @@ std::vector<float>* ofApp::getFrequencyMagnitudes(float* samples)
 			fftBuffer[i] = samples[fftBufferSize - i - 1];
 		}
 	}
+	*/
     //fft_object.do_fft (f, x);     // x (real) --FFT---> f (complex)
 	//fft it.
 	float fftOutput[fftBufferSize];
     fft_object.do_fft(fftOutput, fftBuffer);     // x (real) --FFT---> f (complex)
-    //fft_object.do_fft(fftOutput, samples);     // x (real) --FFT---> f (complex)
+	//fft_object.do_fft(fftOutput, samples);     // x (real) --FFT---> f (complex)
 
 	//compute magnitude of resultant vectors
 	std::vector<float>* mags = new std::vector<float>();

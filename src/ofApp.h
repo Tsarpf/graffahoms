@@ -14,7 +14,7 @@ class ofApp : public ofBaseApp{
 		void audioOut(float * output, int bufferSize, int nChannels);
 		std::vector<float>* getFrequencyMagnitudes(float*);
 
-		ffft::FFTRealFixLen<9> fft_object;
+		ffft::FFTRealFixLen<8> fft_object;
 		std::deque<std::vector<float>> waves;
 
 		std::vector<float> waveform; // this is the lookup table
