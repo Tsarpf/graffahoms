@@ -1,2 +1,5 @@
 bin
 obj/
+MyApplication2.VC.opendb
+MyApplication2.sdf
+.vs/

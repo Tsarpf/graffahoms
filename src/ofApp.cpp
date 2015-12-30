@@ -4,11 +4,16 @@
 #define _USE_MATH_DEFINES
 #include <math.h>
 
+#include "../deps/WindowsAudioListener/AudioListener.h"
+
 void ofApp::setup(){
 	phase = 0;
 	updateWaveform(32);
 	//ofSoundStreamSetup(1, 0); // mono output
 	ofSoundStreamSetup(2, 0, 44100, m_bufferSize, 4);
+
+
+	std::thread t1(&A::foo, &a, 100);
 }
 
 //--------------------------------------------------------------
