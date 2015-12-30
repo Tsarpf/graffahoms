@@ -1,5 +1,6 @@
 #include "SampleQueue.h"
 #include <algorithm>
+#include <iostream>
 
 SampleQueue::SampleQueue(int BitsPerSample, int nChannels)
 {
@@ -34,10 +35,11 @@ void SampleQueue::Dequeue(std::vector<float>& outData, size_t Count)
 		m_queue.pop();
 
 		//move from f.ex -2^15 -> 2^15 to -1 -> 1
-		float fSample = iSample / m_maxSampleVal;
+		float fSample = (float)iSample / (float)m_maxSampleVal;
 
 		outData.push_back(fSample);
 	}
+	//std::cout << "Asked for count: " << Count << " giving out: " << count << std::endl;
 }
 void SampleQueue::Enqueue(std::vector<int>& Samples)
 {
@@ -52,18 +54,19 @@ void SampleQueue::Enqueue(std::vector<int>& Samples)
 
 int SampleQueue::CopyData(const BYTE* Data, const int NumFramesAvailable)
 {
-	//std::lock_guard<std::mutex> lock(m_mutex);
-	std::vector<int> data;
+	std::lock_guard<std::mutex> lock(m_mutex);
+	//std::vector<int> data;
 
 	int byteCount = NumFramesAvailable * (m_bitDepth / 8) * m_nChannels;
 	int step = m_bitDepth / 2;
 	for (int i = 0; i < NumFramesAvailable * m_nChannels; i+=step)
 	{
 		short sample = Data[i];
-		data.push_back(sample);
+		//data.push_back(sample);
+		m_queue.push(sample);
 	}
 
-	Enqueue(data);
+	//Enqueue(data);
 
 	return 0;
 }

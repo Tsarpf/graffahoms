@@ -36,9 +36,12 @@ void ofApp::setup()
 //--------------------------------------------------------------
 void ofApp::update(){
 	static unsigned int start = ofGetElapsedTimeMillis();
+	static unsigned int previousEnd = 0;
 
 	unsigned int sinceStart = ofGetElapsedTimeMillis() - start;
 	unsigned int samplesShouldBeUsed =  sinceStart * 10 * 441 * 2; //441 samples per 10th of a second, in two channels
+
+	unsigned int sinceLast = ofGetElapsedTimeMillis() - previousEnd;
 
 	int sampleCount = samplesShouldBeUsed - m_totalSamplesUsed;
 	m_totalSamplesUsed += sampleCount;
@@ -49,6 +52,7 @@ void ofApp::update(){
 	if (data.size() == 0)
 		return;
 
+	std::cout << data.size() << " since last " << sinceLast << std::endl;
 	auto mags = getFrequencyMagnitudes(data.data());
 	logarithmize(*mags);
 	if(m_waves.size() >= m_waveTimeLength) 
@@ -57,6 +61,8 @@ void ofApp::update(){
 	}
 	m_waves.push_back( *mags );
 	delete mags;
+
+	previousEnd = ofGetElapsedTimeMillis();
 }
 
 //--------------------------------------------------------------
@@ -64,7 +70,6 @@ void ofApp::draw(){
 	if (m_waves.size() > 0)
 	{
 		//draw eq things
-		ofScopedLock waveformLock(waveformMutex);
 		ofPolyline visualizerLine;
 		float length = 3000;
 		auto targetArr = m_waves[m_waves.size() - 1];
