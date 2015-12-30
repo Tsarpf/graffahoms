@@ -7,7 +7,12 @@
     <ClCompile Include="src\main.cpp">
       <Filter>src</Filter>
     </ClCompile>
-    <ClCompile Include="SampleQueue.cpp" />
+    <ClCompile Include="src\SampleQueue.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="deps\WindowsAudioListener\AudioListener.cpp">
+      <Filter>deps</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="src">
@@ -16,12 +21,23 @@
     <Filter Include="addons">
       <UniqueIdentifier>{68e6c5ae-5658-498d-8983-63c7fc84b85e}</UniqueIdentifier>
     </Filter>
+    <Filter Include="deps">
+      <UniqueIdentifier>{892f9d63-151f-4170-86d2-7563fa474dfe}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\ofApp.h">
       <Filter>src</Filter>
     </ClInclude>
-    <ClInclude Include="SampleQueue.h" />
+    <ClInclude Include="src\SampleQueue.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="deps\WindowsAudioListener\AudioListener.h">
+      <Filter>deps</Filter>
+    </ClInclude>
+    <ClInclude Include="deps\WindowsAudioListener\IAudioSink.h">
+      <Filter>deps</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="icon.rc" />

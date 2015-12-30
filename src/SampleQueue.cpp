@@ -1,6 +1,27 @@
 #include "SampleQueue.h"
 #include <algorithm>
 
+SampleQueue::SampleQueue(int BitsPerSample)
+{
+	if (BitsPerSample > 32)
+	{
+		throw "too many bits";
+	}
+	else if (BitsPerSample == 32)
+	{
+		m_maxSampleVal = (1 << 31) - 1;
+	}
+	else
+	{
+		m_maxSampleVal = (1 << BitsPerSample) - 1;
+	}
+	m_bitDepth = BitsPerSample;
+}
+
+SampleQueue::~SampleQueue()
+{
+}
+
 void SampleQueue::Dequeue(std::vector<float>& outData, size_t Count)
 {
 	std::lock_guard<std::mutex> lock(m_mutex);
@@ -27,23 +48,10 @@ void SampleQueue::Queue(std::vector<int> Samples)
 	}
 }
 
-SampleQueue::SampleQueue(int BitsPerSample)
-{
-	if (BitsPerSample > 32)
-	{
-		throw "too many bits";
-	}
-	else if (BitsPerSample == 32)
-	{
-		m_maxSampleVal = (1 << 31) - 1;
-	}
-	else
-	{
-		m_maxSampleVal = (1 << BitsPerSample) - 1;
-	}
-	m_bitsPerSample = BitsPerSample;
-}
 
-SampleQueue::~SampleQueue()
+int SampleQueue::CopyData(const BYTE* Data, const int NumFramesAvailable)
 {
+	std::lock_guard<std::mutex> lock(m_mutex);
+	throw "not implemented";
+	return 0;
 }

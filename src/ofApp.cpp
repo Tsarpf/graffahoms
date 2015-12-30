@@ -5,15 +5,36 @@
 #include <math.h>
 
 #include "../deps/WindowsAudioListener/AudioListener.h"
+#include "SampleQueue.h"
+ofApp::ofApp() : m_queue(m_bitDepth)
+{
+}
 
-void ofApp::setup(){
+void ofApp::setup()
+{
 	phase = 0;
 	updateWaveform(32);
 	//ofSoundStreamSetup(1, 0); // mono output
-	ofSoundStreamSetup(2, 0, 44100, m_bufferSize, 4);
+	//ofSoundStreamSetup(2, 0, 44100, m_bufferSize, 4);
 
+	//AudioListener(int BitsPerSample, int FormatTag, int BlockAlign, int XSize);
+	//0x8889000a
+	//	AudioListener listener(bitDepth, WAVE_FORMAT_PCM, 4, 0);
+	CoInitialize(nullptr);
+	AudioListener listener(16, WAVE_FORMAT_PCM, 4, 0);
+	std::thread t1(&AudioListener::RecordAudioStream, listener, &m_queue);
 
-	std::thread t1(&A::foo, &a, 100);
+	//make an interface for audio sink -- done, 
+
+	//make a thread for audio listener, run it's function.
+	
+	//could we just make samplequeue implement the sink interface?
+	//then every time we get data from audio listener, we lock the queue and add the data there.
+	//sound good?
+
+	//get data from audio listener
+
+	//std::thread t1(&A::foo, &a, 100);
 }
 
 //--------------------------------------------------------------
@@ -25,17 +46,17 @@ void ofApp::update(){
 
 //--------------------------------------------------------------
 void ofApp::draw(){
-	if (waves.size() > 0)
+	if (m_waves.size() > 0)
 	{
 		//draw eq things
 		ofScopedLock waveformLock(waveformMutex);
 		ofPolyline visualizerLine;
 		float length = 3000;
-		auto targetArr = waves[waves.size() - 1];
+		auto targetArr = m_waves[m_waves.size() - 1];
 		for(float i = 1; i < targetArr.size() / 2; i++)
 		//for(float i = 1; i < m_bufferSize; i++)
 		{
-			float height = waves[waves.size() - 1][i];
+			float height = m_waves[m_waves.size() - 1][i];
 			visualizerLine.addVertex(
 				//(float)50 + length * i / ((float)m_bufferSize / 2),
 				50.0f + length * i / ((float)m_bufferSize),
@@ -91,11 +112,11 @@ void ofApp::audioOut(float * output, int bufferSize, int nChannels)
 
 	auto mags = getFrequencyMagnitudes(output);
 	logarithmize(*mags);
-	if(waves.size() >= m_waveTimeLength) 
+	if(m_waves.size() >= m_waveTimeLength) 
 	{
-		waves.pop_front();
+		m_waves.pop_front();
 	}
-	waves.push_back( *mags );
+	m_waves.push_back( *mags );
 	delete mags;
 
 }
@@ -142,7 +163,7 @@ std::vector<float>* ofApp::getFrequencyMagnitudes(float* samples)
 
 	//fft it.
 	float fftOutput[fftBufferSize];
-    fft_object.do_fft(fftOutput, fftBuffer);     // x (real) --FFT---> f (complex)
+    m_fftObject.do_fft(fftOutput, fftBuffer);     // x (real) --FFT---> f (complex)
 
 	//compute magnitude of resultant vectors
 	std::vector<float>* mags = new std::vector<float>();

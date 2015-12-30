@@ -176,13 +176,16 @@
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="SampleQueue.cpp" />
+    <ClCompile Include="deps\WindowsAudioListener\AudioListener.cpp" />
     <ClCompile Include="src\main.cpp" />
     <ClCompile Include="src\ofApp.cpp" />
+    <ClCompile Include="src\SampleQueue.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="SampleQueue.h" />
+    <ClInclude Include="deps\WindowsAudioListener\AudioListener.h" />
+    <ClInclude Include="deps\WindowsAudioListener\IAudioSink.h" />
     <ClInclude Include="src\ofApp.h" />
+    <ClInclude Include="src\SampleQueue.h" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="$(OF_ROOT)\libs\openFrameworksCompiled\project\vs\openframeworksLib.vcxproj">
