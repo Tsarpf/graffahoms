@@ -10,12 +10,13 @@ class SampleQueue : public IAudioSink
 	std::queue<int> m_queue;
 	int m_bitDepth;
 	int m_maxSampleVal;
+	int m_nChannels;
 	std::mutex m_mutex;
 public:
 	void Dequeue(std::vector<float>& outData, size_t count);
-	void Queue(std::vector<int> Samples);
+	void Enqueue(std::vector<int>& Samples);
 	int CopyData(const BYTE* Data, const int NumFramesAvailable) override;
-	SampleQueue(int);
+	SampleQueue(int, int);
 	~SampleQueue();
 };
 

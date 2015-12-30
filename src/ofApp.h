@@ -3,10 +3,16 @@
 #include "ofMain.h"
 #include "../deps/ffft/FFTRealFixLen.h"
 #include "SampleQueue.h"
+#include "../deps/WindowsAudioListener/AudioListener.h"
 
 class ofApp : public ofBaseApp
 {
+	unsigned int m_totalSamplesUsed = 0;
+
 	const int m_bitDepth = 16;
+
+	std::thread m_listenerThread;
+	AudioListener m_listener;
 
 	ffft::FFTRealFixLen<8> m_fftObject;
 	std::deque<std::vector<float>> m_waves;
@@ -31,8 +37,6 @@ public:
 	void update();
 	void draw();
 
-	void updateWaveform(int waveformResolution);
-	void audioOut(float * output, int bufferSize, int nChannels);
 	std::vector<float>* getFrequencyMagnitudes(float*);
 	void logarithmize(std::vector<float>& List);
 	void findMinMax(float& Min, float& Max, const std::vector<float>& List);

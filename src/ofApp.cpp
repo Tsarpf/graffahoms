@@ -6,23 +6,19 @@
 
 #include "../deps/WindowsAudioListener/AudioListener.h"
 #include "SampleQueue.h"
-ofApp::ofApp() : m_queue(m_bitDepth)
+ofApp::ofApp() : m_queue(m_bitDepth, 2), m_listener(16, WAVE_FORMAT_PCM, 4, 0)
 {
 }
 
 void ofApp::setup()
 {
-	phase = 0;
-	updateWaveform(32);
 	//ofSoundStreamSetup(1, 0); // mono output
 	//ofSoundStreamSetup(2, 0, 44100, m_bufferSize, 4);
 
 	//AudioListener(int BitsPerSample, int FormatTag, int BlockAlign, int XSize);
 	//0x8889000a
 	//	AudioListener listener(bitDepth, WAVE_FORMAT_PCM, 4, 0);
-	CoInitialize(nullptr);
-	AudioListener listener(16, WAVE_FORMAT_PCM, 4, 0);
-	std::thread t1(&AudioListener::RecordAudioStream, listener, &m_queue);
+	m_listenerThread = std::thread(&AudioListener::RecordAudioStream, m_listener, &m_queue);
 
 	//make an interface for audio sink -- done, 
 
@@ -39,9 +35,28 @@ void ofApp::setup()
 
 //--------------------------------------------------------------
 void ofApp::update(){
-	ofScopedLock waveformLock(waveformMutex);
-	updateWaveform(ofMap(ofGetMouseX(), 0, ofGetWidth(), 3, 64, true));
-	frequency = ofMap(ofGetMouseY(), 0, ofGetHeight(), 60, 700, true);
+	static unsigned int start = ofGetElapsedTimeMillis();
+
+	unsigned int sinceStart = ofGetElapsedTimeMillis() - start;
+	unsigned int samplesShouldBeUsed =  sinceStart * 10 * 441 * 2; //441 samples per 10th of a second, in two channels
+
+	int sampleCount = samplesShouldBeUsed - m_totalSamplesUsed;
+	m_totalSamplesUsed += sampleCount;
+
+	std::vector<float> data;
+	m_queue.Dequeue(data, sampleCount);
+
+	if (data.size() == 0)
+		return;
+
+	auto mags = getFrequencyMagnitudes(data.data());
+	logarithmize(*mags);
+	if(m_waves.size() >= m_waveTimeLength) 
+	{
+		m_waves.pop_front();
+	}
+	m_waves.push_back( *mags );
+	delete mags;
 }
 
 //--------------------------------------------------------------
@@ -54,7 +69,6 @@ void ofApp::draw(){
 		float length = 3000;
 		auto targetArr = m_waves[m_waves.size() - 1];
 		for(float i = 1; i < targetArr.size() / 2; i++)
-		//for(float i = 1; i < m_bufferSize; i++)
 		{
 			float height = m_waves[m_waves.size() - 1][i];
 			visualizerLine.addVertex(
@@ -69,56 +83,6 @@ void ofApp::draw(){
 		ofSetColor(ofColor::red);
 		visualizerLine.draw();
 	}
-}
-
-void ofApp::updateWaveform(int waveformResolution)
-{
-	waveform.resize(waveformResolution);
-	waveLine.clear();
-
-	// "waveformStep" maps a full oscillation of sin() to the size 
-	// of the waveform lookup table
-	float waveformStep = (M_PI * 2.) / (float) waveform.size();
-
-	for(unsigned int i = 0; i < waveform.size(); i++) {
-		waveform[i] = sin(i * waveformStep);
-		waveLine.addVertex(ofMap(i, 0, waveform.size() - 1, 0, ofGetWidth()),
-				ofMap(waveform[i], -1, 1, 0, ofGetHeight()));
-	}
-}
-
-void ofApp::audioOut(float * output, int bufferSize, int nChannels)
-{
-	ofScopedLock waveformLock(waveformMutex);
-
-	float sampleRate = 44100;
-	float phaseStep = frequency / sampleRate;
-
-	outLine.clear();
-
-	for(int i = 0; i < bufferSize * nChannels; i += nChannels) {
-		phase += phaseStep;
-		int waveformIndex = (int)(phase * waveform.size()) % waveform.size();
-		output[i] = waveform[waveformIndex];
-
-		outLine.addVertex(ofMap(i, 0, bufferSize - 1, 0, ofGetWidth()),
-				ofMap(output[i], -1, 1, 0, ofGetHeight()));
-	}
-	if(bufferSize != m_bufferSize) {
-		std::cout << "buffer size abnormal: " << bufferSize << " vs " << m_bufferSize << std::endl;
-		return;
-	}
-
-
-	auto mags = getFrequencyMagnitudes(output);
-	logarithmize(*mags);
-	if(m_waves.size() >= m_waveTimeLength) 
-	{
-		m_waves.pop_front();
-	}
-	m_waves.push_back( *mags );
-	delete mags;
-
 }
 
 void ofApp::findMinMax(float& Min, float& Max, const std::vector<float>& List)

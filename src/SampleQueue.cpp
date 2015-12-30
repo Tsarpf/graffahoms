@@ -1,7 +1,7 @@
 #include "SampleQueue.h"
 #include <algorithm>
 
-SampleQueue::SampleQueue(int BitsPerSample)
+SampleQueue::SampleQueue(int BitsPerSample, int nChannels)
 {
 	if (BitsPerSample > 32)
 	{
@@ -16,6 +16,7 @@ SampleQueue::SampleQueue(int BitsPerSample)
 		m_maxSampleVal = (1 << BitsPerSample) - 1;
 	}
 	m_bitDepth = BitsPerSample;
+	m_nChannels = nChannels;
 }
 
 SampleQueue::~SampleQueue()
@@ -27,7 +28,7 @@ void SampleQueue::Dequeue(std::vector<float>& outData, size_t Count)
 	std::lock_guard<std::mutex> lock(m_mutex);
 
 	int count = std::min(Count, m_queue.size());
-	for (int i = 0; i < Count; i++)
+	for (int i = 0; i < count; i++)
 	{
 		int iSample = m_queue.front();
 		m_queue.pop();
@@ -38,7 +39,7 @@ void SampleQueue::Dequeue(std::vector<float>& outData, size_t Count)
 		outData.push_back(fSample);
 	}
 }
-void SampleQueue::Queue(std::vector<int> Samples)
+void SampleQueue::Enqueue(std::vector<int>& Samples)
 {
 	std::lock_guard<std::mutex> lock(m_mutex);
 
@@ -51,7 +52,18 @@ void SampleQueue::Queue(std::vector<int> Samples)
 
 int SampleQueue::CopyData(const BYTE* Data, const int NumFramesAvailable)
 {
-	std::lock_guard<std::mutex> lock(m_mutex);
-	throw "not implemented";
+	//std::lock_guard<std::mutex> lock(m_mutex);
+	std::vector<int> data;
+
+	int byteCount = NumFramesAvailable * (m_bitDepth / 8) * m_nChannels;
+	int step = m_bitDepth / 2;
+	for (int i = 0; i < NumFramesAvailable * m_nChannels; i+=step)
+	{
+		short sample = Data[i];
+		data.push_back(sample);
+	}
+
+	Enqueue(data);
+
 	return 0;
 }
