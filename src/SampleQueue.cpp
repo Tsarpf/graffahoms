@@ -2,7 +2,7 @@
 #include <algorithm>
 #include <iostream>
 
-SampleQueue::SampleQueue(int BitsPerSample, int nChannels)
+SampleQueue::SampleQueue(int BitsPerSample, int nChannels, int ChunkSize)
 {
 	if (BitsPerSample > 32)
 	{
@@ -18,55 +18,57 @@ SampleQueue::SampleQueue(int BitsPerSample, int nChannels)
 	}
 	m_bitDepth = BitsPerSample;
 	m_nChannels = nChannels;
+	m_chunkSize = ChunkSize;
 }
 
 SampleQueue::~SampleQueue()
 {
 }
 
-void SampleQueue::Dequeue(std::vector<float>& outData, size_t Count)
+void SampleQueue::Dequeue(std::vector<AudioChunk*>* outChunks, int Count)
 {
 	std::lock_guard<std::mutex> lock(m_mutex);
 
-	int count = std::min(Count, m_queue.size());
+	if (m_queue.size() == 0)
+		return;
+
+	int count = std::min((int)m_queue.size(), Count);
 	for (int i = 0; i < count; i++)
 	{
-		int iSample = m_queue.front();
+		outChunks->push_back(m_queue.front());
 		m_queue.pop();
-
-		//move from f.ex -2^15 -> 2^15 to -1 -> 1
-		float fSample = (float)iSample / (float)m_maxSampleVal;
-
-		outData.push_back(fSample);
-	}
-	//std::cout << "Asked for count: " << Count << " giving out: " << count << std::endl;
-}
-void SampleQueue::Enqueue(std::vector<int>& Samples)
-{
-	std::lock_guard<std::mutex> lock(m_mutex);
-
-	for (int i = 0; i < Samples.size(); i++)
-	{
-		m_queue.push(Samples[i]);
 	}
 }
-
 
 int SampleQueue::CopyData(const BYTE* Data, const int NumFramesAvailable)
 {
 	std::lock_guard<std::mutex> lock(m_mutex);
-	//std::vector<int> data;
 
-	int byteCount = NumFramesAvailable * (m_bitDepth / 8) * m_nChannels;
-	int step = m_bitDepth / 2;
-	for (int i = 0; i < NumFramesAvailable * m_nChannels; i+=step)
+	if (NumFramesAvailable % 448 != 0 || NumFramesAvailable == 0 || Data == NULL)
 	{
-		short sample = Data[i];
-		//data.push_back(sample);
-		m_queue.push(sample);
+		std::cout << "sample count wasn't 448, was: " << NumFramesAvailable << std::endl;
+		return 1;
 	}
 
-	//Enqueue(data);
+	short* dataStart = (short*)Data;
+	const int divisor = sizeof(long) / sizeof(short);
+	for (short* data = (short*)Data; data < dataStart + NumFramesAvailable * 2; data+=128)
+	{
+		AudioChunk* chunk = new AudioChunk();
+
+		long long* copier = new long long[128 / divisor];
+
+		for (int i = 0; i < (128 / divisor) ; i++)
+		{
+			copier[i] = ((long long*)data)[i];
+		}
+
+		chunk->chunk = (short*)copier;
+			
+		chunk->size = 128;
+
+		m_queue.push(chunk);
+	}
 
 	return 0;
 }

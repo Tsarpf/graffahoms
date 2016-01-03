@@ -11,6 +11,7 @@
 #include <audiopolicy.h>
 #include "AudioListener.h"
 #include <mmreg.h>
+#include <iostream>
 
 AudioListener::AudioListener(int BitsPerSample, int FormatTag, int BlockAlign, int XSize)
 {
@@ -112,6 +113,7 @@ HRESULT AudioListener::RecordAudioStream(IAudioSink* Sink)
 			}
 
 			// Copy the available capture data to the audio sink.
+			//std::cout << numFramesAvailable << std::endl;
 			hr = Sink->CopyData(
 				pData, numFramesAvailable);
 			if (hr) throw hr;

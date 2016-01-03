@@ -22,8 +22,8 @@ private:
 	UINT32 m_bufferFrameCount;
 	REFERENCE_TIME m_hnsActualDuration;
 
-	const int m_refTimesPerMS = 10000;
-	const int m_refTimesPerSec = 10000000;
+	const int m_refTimesPerMS = 500;
+	const int m_refTimesPerSec = 500000;
 	
 	const CLSID m_CLSID_MMDeviceEnumerator = __uuidof(MMDeviceEnumerator);
 	const IID m_IID_IMMDeviceEnumerator = __uuidof(IMMDeviceEnumerator);
